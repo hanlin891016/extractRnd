@@ -1,0 +1,34 @@
+Risk-neutral density extraction procedure
+========================================================
+
+```{r setoptions, echo = FALSE}
+# setwd('Desktop/workspace/extractRnd/demo/')
+opts_chunk$set(echo = TRUE, results='markup', cache = TRUE)
+```
+
+```{r session}
+sessionInfo()
+```
+
+I demo how to extract risk-neutral density from the implied volatility surface. Data comes from optionmetrics. Extraction method heavily follows Figlewski 2010. 
+
+## Read in data. 
+
+Sample data is the daily vol surface of IBM and MSFT during August of 2013. 
+
+```{r}
+data = read.csv('sampledata_optionmetrics.csv')
+data = data[,c('date','days','ticker','cp_flag','impl_strike','delta','impl_volatility')]   # these variables are relevant
+summary(data)
+```
+
+Let's visualize the 1-quarter-ahead vol curves for IBM on the first day of Aug 2013. Note that puts are much more expensive than calls (does this not violate put-call parity?)
+
+```{r}
+# {r, fig.width=7, fig.height=6}
+subdata = subset(data, (ticker == 'IBM') & (date == min(data$date)) & (days == 91))
+with(subset(subdata, cp_flag == 'C'), plot(impl_strike, impl_volatility, col='red', xlab = 'implied strike price', ylab='implied volatility', main = 'IBM, 1 quarter ahead'))
+with(subset(subdata, cp_flag == 'P'), points(impl_strike, impl_volatility, col='blue'))
+legend("topright", pch = 1, col = c("red", "blue"), legend = c("call", "put"))
+```
+

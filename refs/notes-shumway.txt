@@ -1,0 +1,33 @@
+jeff said there were ideas thrown around (jules?) about using multiple stocks to look at dividend strips
+
+=== refs
+
+chabi-yo, garcia, renault 08 (could be quite relevant)
+- the puzzle may be due to latent states. perhaps the math developed there can be used. 
+
+christoffersen, heston, jacobs 09 (not very related)
+- a statistical, two-factor model for volatility smirk (slope and level move separately)
+
+bliss panigirtzoglou 05, use the reverse-cdf-method to estiamte implied risk aversion coefficients
+
+chaudhuri schroder 09
+- invented a test of monotonicity of SDF. found empirical evidence of monotonicity for individual stocks, but not SPX. 
+
+beare schmidt 11
+- another empirical test. also rejected monotonicity. 
+
+bakshi chabi-yo 13
+- jfe 13. lower bound of variance of perm vs. trans component of sdfs. comes from alvarez jermann 05, and is more general than hansen-jagannathan. 
+
+bakashi madan panayotov 10
+- found support for a u-shaped pricing kernel
+
+ziegler 07 
+- basically says that all existing proposed explanations do not seem to do the trick. somewhat related to ivo's paper? 
+
+polkovnichenko zhao 13
+- proposed an explanation based on rank-dependent utility and probability-weighting-bias. 
+
+---
+
+take a look at beta representations... 

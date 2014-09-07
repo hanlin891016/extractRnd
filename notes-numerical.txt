@@ -1,0 +1,47 @@
+Don't look at too many things. Just need to: 
+
+1. merge data with relevant prices, dividends, perhaps some characteristics, etc (optionmetrics may have some). risk-free rate. 
+2. fit a normal (also record mode) to each strip of option surface. Log return space. 
+
+=== CODE: port matlab to R
+
+main: mainFunction...m
+
+completeTailsV2.m
+fromQ2P.m	(this sounds like ross?)
+interpolateSmile.m
+gridSearch.m
+
+volsurface2rnPrices.m
+vol2price.m
+setprod.m, splinefit.m, sound like utility functions
+
+
+====== DATA
+
++ berkeley options: (1976 - 1996)
+https://afs.stanford.edu/?path=/afs/ir/data/gsb/bod/
+
+designed to access via unix, need to read unix tarfile
+organized by date in 1996. before then... not as detailed. there are perl scripts (e.g. in 1991/implied.pl) that seem to do stuff to it
+
+====== FUTURE
+
+- should use quarterly options. p21 in figlewski '08
+
+- figlewski used raw option prices. and took into account bid-offer spreads. perhaps take a look, but vol surface should be good enough for my purposes? 
+
+- fitting either skewed normal dist, or mixture? can't make mixture weird tho. eric renault has a slide on that: Skew-Normal distribution ( Azzalini, 1985)
+  - here are some refs: http://www.ivw.unisg.ch/~/media/internet/content/dateien/instituteundcenters/ivw/wps/wp122.pdf
+  - recent proposal: http://www.mcgill.ca/files/economics/asymmetric_t.pdf
+  - estimation seems weird difficult tho. there seems to be a method of moments estimation for skewness, but what abt the other two parameters? 
+  - skewed generalized student t seems to do the job for both skewness and kurtosis? 
+
+=== METHOD: figlewski 2008
+
+he completes tails using generalized extreme value. i can probably do something more parametric, like some generalized lognormal. 
+
+1. smooth the implied vol surface (steve = fourth order splie + ATM knot. i think optionmetrics already did it. perhaps add penalty term to double derivatives, to make things smoother)
+- deal with put-call differences. bliss did vega-weighting. steve? 
+2. get corresponding call prices, do double derivative to get pdf. cite Breeden and Litzenberger (1978) 
+3. complete tails (less important for me)

@@ -1,0 +1,171 @@
+\documentclass[pdftex,12pt,a4paper]{article}
+
+
+% use user packages
+\usepackage[margin=1in]{geometry}  % set the margins to 1in on all sides
+\usepackage{graphicx}              % to include figures
+\usepackage{amsmath}               % great math stuff
+\usepackage{amsfonts}              % for blackboard bold, etc
+\usepackage{amsthm}                % better theorem environments
+\usepackage{subfigure}
+\usepackage{hyperref, url}
+
+% use theorems
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{cor}[theorem]{Corollary}
+\newtheorem{conj}[theorem]{Conjecture}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\newcommand{\comment}[1]{\textbf{[@J: #1]}}
+
+\begin{document}
+
+\title{Projecting a multivariate SDF onto each stock's return space: analytical derivations}
+\author{J Li}
+\date{\today}
+\maketitle
+
+\abstract
+
+This is the key step of making joint estimation of stock-specific risk adjustments feasible. Currently it is a one-period model, and also has strong normality assumptions. Later may want to use multi-period (and then lead to one-period), and potentially use a mixture of normals. Also need some justification of the type of utility I'm using. 
+
+\section{Primitives}
+
+Set up: 
+
+\begin{itemize}
+\item We assume that the relevant state variables in the economy are a list of $k$ factor returns $F \sim \mathcal{N}(\mu_F, \Sigma_F)$. For instance, $F$ can be the standard Fama-French 3 factors plus Momentum. 
+\item Return of each individual stock follows a factor structure: $R = \beta' F + e$, where $\beta$ is a $k$-by-1 vector, $e \sim \mathcal{N}(0, \sigma^2_e)$ and independent of $F$. The normality assumptions here are indispensable to yield analytical solutions. 
+\item We assume that agents have a multivariate CARA type utility function that depends on the factors. Therefore the SDF $m(F) = \delta \exp(-\gamma' F)$, where $\delta < 1$ is the subjective impatience parameter, and $\gamma = (\gamma_1, ..., \gamma_k)'$ reflects risk preferences. \comment{Need justification... references about multivariate preferences of this kind? ICAPM?}
+\end{itemize}
+
+Now, we need to project $m(F)$ onto the return space of the single-name stock. In particular, we need: 
+
+\begin{equation}
+m(r) = \mathbb{E}_F(m(F) | R = r)
+\end{equation}
+
+This, due to the nice normality and CARA assumptions, have an analytical solution. 
+
+\section{Derivation}
+
+Let's denote the posterior variable $\tilde{F} \sim F | R = r$, and denote expectation under the posterior distribution as $\tilde{\mathbb{E}}(\cdot)$. $\tilde{\mu}_F(\beta, r)$ and $\tilde{\Sigma}_F(\beta, r)$ denote the posterior mean and covariances of $F$ given $R = r$. In this section, we first derive the distribution of $\tilde{F}$ by exploiting conjugate prior conditions, and then work out $m(r)$ by using a moment-generating-function formula. 
+
+\subsection{Posterior Distribution: $\tilde{F}$}
+
+This derivation follows the case of portfolio-view under Black-Litterman updating. The math behind can be justified using either Theil's mixed-estimation, or a Bayesian argument. Jay Walter's ``The Black-Litterman Model In Detail'' has good references. On a high level, think about $F$ as unobserved state variables, and $R = r$ as a noisy, incomplete observation that gives some updating information about $F$. 
+
+Cutting to the chase, $\tilde{F}$ is a multivariate normal, and the posterior mean and covariance of $F$ given observing $R = r$ is:
+
+\begin{enumerate}
+\item 
+\begin{align}
+\tilde{\mu}_F(\beta, r) & = (\Sigma_F^{-1} + \frac{\beta \beta'}{\sigma^2_e})^{-1} (\Sigma_F \mu_F + \frac{\beta}{\sigma^2_e} r) \\
+& = \underbrace{(\Sigma_F^{-1} + \frac{\beta \beta'}{\sigma^2_e})^{-1} \Sigma_F \mu_F}_{\mu_a(\beta)} + \underbrace{(\Sigma_F^{-1} + \frac{\beta \beta'}{\sigma^2_e})^{-1} \frac{\beta}{\sigma^2_e}}_{\mu_b(\beta)} r \label{posteriorMean}
+\end{align}
+
+\item 
+\begin{equation}
+\tilde{\Sigma}_F(\beta, r) = \tilde{\Sigma}_F(\beta) = (\Sigma_F^{-1} + \frac{\beta \beta'}{\sigma^2_e})^{-1} \label{posteriorCovariance}
+\end{equation}
+\end{enumerate}
+
+\textbf{Some remarks:}
+
+\begin{itemize}
+\item $\tilde{\mu}_F$ is a precision-weighted-average of prior mean $\mu_F$ and noisy observations $r$. It is linear in $r$: $\tilde{\mu}_F(\beta,r) = \mu_a(\beta) + \mu_b(\beta) r$. At the same time, $\tilde{\Sigma}_F$ does not depend on $r$. 
+\item As expected, $\tilde{\Sigma}_F \le \Sigma_F$, in the sense that $\Sigma - \tilde{\Sigma}_F$ is p.d., as $\beta \beta' \ge 0$. Equality holds only if $\beta = 0$, in which case $R$ is pure noise does not tell us anything about $F$. 
+\item $r$'s impact on $\tilde{\mu}_F$ increases in the absolute magnitude of $\beta$ \footnote{Make more formal.} and decreases in $\sigma^2_e$, as expected. $\beta$ governs signal while $\sigma_e^2$ governs noise. When $\beta = 0$, $\tilde{\mu}_F \equiv \mu_F$. 
+\end{itemize}
+
+We will write out the math steps. This stuff should go into an appendix. 
+
+\subsection{Projected Discount Factor}
+
+Now we are ready to project the SDF. Luckily, we can use the formula of moment generating function for multivariate normal (\url{http://en.wikipedia.org/wiki/Moment-generating_function#Examples}): 
+
+\begin{align}
+m(r) & = \tilde{\mathbb{E}}(m(F)) \\
+& = \tilde{\mathbb{E}}(\delta e^{-\gamma' F}) \\
+& = \delta \tilde{\mathbb{E}}(e^{-\gamma' F}) \\
+& \stackrel{\text{m.g.f. formula}}{=} \delta \exp \left( - \gamma' \tilde{\mu}_F + \frac{1}{2} \gamma' \tilde{\Sigma}_F \gamma \right) \\
+& \stackrel{\text{Plug in } \eqref{posteriorMean} \eqref{posteriorCovariance}}{=} \delta \exp \left( - \gamma' (a + br) + \frac{1}{2} \gamma \tilde{\Sigma} \gamma \right) \\
+& = \underbrace{\delta \exp \left( - \gamma' a + \frac{\gamma' \tilde{\Sigma} \gamma }{2} \right)}_{\text{Constant }C} \cdot \underbrace{e ^ {- \gamma' b r}}_{\text{Varying with }r}
+\end{align}
+
+Let's think about the constant and varying parts separately. 
+
+\begin{itemize}
+\item Constant part: this part deals with ``absolute level of discounting''. 
+\item Varying part: the loadings are $\sum_j \gamma_j b_j$. It's unclearly whether high $\beta$ leads to higher discounting... in fact i would think it won't. 
+\end{itemize}
+
+What about the risk-aversion w.r.t. $r$? 
+
+\begin{align}
+m'(r) & = - \gamma' b \cdot m(r) \\
+\Rightarrow - \frac{m'(r)}{m(r)} & = \gamma' b \\
+& = \gamma' (\sigma_e^2 \Sigma_F^{-1} + \beta \beta')^{-1} \beta
+\end{align}
+
+
+\begin{itemize}
+\item For each $j$ such that $\beta_j > 0$, clearly risk aversion is increasing in $\gamma_j$. 
+\item I need to derive wrt $\beta$. The derivative should be positive... but the math does not seem to work out? 
+\item Smaller $\sigma_e^2$ leads to larger risk aversion. 
+\end{itemize}
+
+\subsection{What about risk neutral distribution?}
+
+Let's denote $m(r) = C e^{-\theta r}$, where $C$ is normalized appropriately, and $\theta = \gamma' b$. Let's realize that physical returns are normally distributed: 
+
+\begin{equation}
+R \sim \mathcal{N}(\mu_R = \beta' \mu_F, \sigma_R^2 = \beta' \Sigma_F \beta + \sigma_e^2)
+\end{equation}
+
+Let's multiple the densities. I'm ignoring the normalization constant. 
+
+\begin{align}
+q(r) & \propto m(r) p(r) \\
+& \propto e^{-\theta r} \exp \left( -\frac{(r - \mu_R)^2}{2\sigma_R^2} \right) \\
+& \stackrel{\text{Completing squares}}{=} \exp ( -\frac{1}{2 \sigma_R^2} \left[(r - (\mu_R - 2 \theta \sigma_R^2) )^2 + 4 \theta \mu_R \sigma_R^2 - 4 \theta^2 \sigma_R^4 \right] ) \\
+& \propto \exp \left( \frac{-(r - \tilde{\mu}_R)^2 }{2} \right)
+\end{align}
+
+This this is a mean-shift from $\mu_R$ to $\tilde{\mu}_R$, where
+
+\begin{align}
+\tilde{\mu}_R & = \mu_R - 2 \theta \sigma_R^2 \\
+& \stackrel{\text{plugging in}}{=} \beta' \mu_F - \underbrace{2 \gamma' \beta}_{\text{Price of risk}} \cdot \underbrace{(\beta' \Sigma_F \beta + \sigma_e^2)}_{\text{Risk}}
+\end{align}
+
+Higher risk loadings $\beta$ leads to higher price of risk for this stock. 
+
+\section{How to actually do estimation?}
+
+\begin{enumerate}
+\item I think, $\Sigma_F, \mu_F, \beta, \sigma_e^2$ will have to be estimated in a first-stage. 
+\item At each time $t$, do a normal fit on the RND of each stock's return. 
+\item And then it comes to estimating $\gamma_t$, let's let risk-aversion by time-varying. Estimation is MLE with ex-post returns (requires some ``aggregate rational expectations'' assumption), because the reverse-transformed returns are iid uniform (Diebold has refs), so the likelihood function is easy to compute. 
+\begin{itemize}
+\item Perhaps we can allow $\Sigma_F, \mu_F$ to be somewhat time varying. I still have trouble thinking about how to make use of SPX's RND. It seems that it is just another return to throw into the MLE. 
+\end{itemize}
+\end{enumerate}
+
+\subsection{Coding plan}
+
+\begin{enumerate}
+\item Need a routine to extract RNDs and fit a log-normal. This has to be robust. Each stock's parameters have to be slowly varying over time (need work)
+\item The analytical transformations need to be coded up into utility functions (quick)
+\item Estimate the beta-representations of each stock. Fix betas initially. 
+\item Code up log likelihood estimation as a function. 
+\item Do MLE... see if the parameters make sense over time. 
+\end{enumerate}
+
+\section{Some citations}
+
+
+\end{document}

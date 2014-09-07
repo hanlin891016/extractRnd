@@ -1,0 +1,36 @@
+Important - assuming structure in sdf will give rise to certain structure in returns. or will it, without assuming rational expectations? 
+
+TODO
+
+1. look for multivariate utilities. serrano course has some; also, utilities for consumption and leisure. or, can we get it in the ICAPM derivation? I believe so! 
+- another common alternative seems to be cobb douglas type. returns are not complements, tho! 
+
+2. need to derive that my multivariate CARA gives rise to factor model. 
+- campbell has many papers on that i think. his book with lo may also do the job. 
+
+
+i don't think mixtures work. student-t and skew-normals also don't seem to be worth looking into. 
+- the key is, i need to get a girsanov with my sdf... (lovely e^{-x})
+- all conjugate priors: http://andrewgelman.com/2009/09/11/a_compendium_of/
+
+2. read up http://www.stata.com/meeting/chicago11/materials/chi11_baum.pdf, as well as other refs (https://environment.yale.edu/content/documents/00001637/Mixed-Estimation.pdf?1330699238)
+
+A Time- Series Analysis of Representative Agent Models of Consumption and Leisure Choice under Uncertainty
+  this paper did a cobb-douglas utility. it just reminds me... why can't i do additive log utility? 
+
+The Conditional CAPM and the Cross-Section of Expected Returns
+
+Resurrecting the (C)CAPM: A Cross- Sectional Test When Risk Premia Are Time-Varying
+
+Reyfman, Alexander, 1997, ‘‘Labor Market Risk and Expected Asset Returns,’’ Ph.D. dissertation, University of Chicago.
+
++ brute force integration. 
+- here is the conditional density of bivariate normal: http://math.tntech.edu/ISR/Introduction_to_Probability/Joint_Distributions/thispage/newnode6.html
+- here is conditional of multivariate normal: http://www.math.uiuc.edu/~r-ash/Stat/StatLec21-25.pdf
+
+
++ http://math.stackexchange.com/questions/418464/projections-of-multivariate-normal-distribution
+"This is due to the properties of the characteristic function of a multivariate normal."
+
++ this seems relevant - look at rotations of multivariate normals: 
+http://www.stat.yale.edu/~pollard/Courses/241.fall97/Multinormal.pdf

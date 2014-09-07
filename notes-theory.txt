@@ -1,0 +1,30 @@
+=== immediate Qs
+
+term structure of equity returns? take a look at equity yields paper. otherwise, best is just engle stuff. 
+
+my method needs validation - validation that the subjective physical density has value. can compare with surveys, and what else? (buying/selling pressure?)
+
+engle's paper discusses projection! 
+"Earlier papers, such as Rubinstein (1976) and Brown and Gibbons (1985), derive conditions such that a pricing kernel that has the consumption growth rate as a state variable is equivalent to a pricing kernel that has the equity index return as a pricing kernel state variable."
+
+Okay, I need to actually understand the multi-beta representation of SDF. and then projection should be simple. 
+- cochrane also has stuff about testing
+- mathwise: this might be for multivariate girsanov. in any case, LIBOR mkt model claims to use it: http://www.math.nyu.edu/faculty/goodman/teaching/StochCalc2012/notes/Week10.pdf
+
+- i'm suspecting that the engle method can fit the term structure (so whole surface), which is a benefit. 
+
+there are things not so dependent on method. like mode (for robustness)
+- my method has to work for less liquid single names. can't assume many prices
+- i may use volume data to pick the most liquid horizon
+
+will need to both subtract out dividends, and also combine with current prices (to transform to return space)
+
+= existing papers looking at expectations
+Bliss and Panigirtzoglou (2004) - parameterizes the risk layer. Rosenberg and Engle (2002) does a fully dynamic model. 
+
+Melick and Thomas (1997) - mixture of lognormals
+Campa, Chang and Reider (1998) - several methods used
+Gemmill and Saflekos (2000)
+
+shumway: uses the inverse cdf transform
+

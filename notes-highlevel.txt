@@ -1,0 +1,6 @@
++ answer: if the estimated SDF on SPX incorporates a behavioral noise part. can this be exploited in an options-based trading strategy? (i think bar... sth has a paper on that)
+
+=== Tests for derived cross-section of Ps
+
++ noise trader existence: institutional holdings ratio -> lower errors in forecasting. I remember kent daniel is working on some paper (to verify embedded leverage) that has data on institutional holdings. 
+
