@@ -1,0 +1,34 @@
+Use R? 
+	http://iangow.wordpress.com/2012/09/03/remote-wrds-sas-from-r/#
+
+this might be a decent intro to wrds + SAS
+	http://people.tamu.edu/~tuncez/files/WRDS%20-%20SAS%20INTRODUCTION.pdf
+
+wrds presentation: use SECID for optionmetrics. it also has cusip? 
+	wrds-sec platform... there is a unique id map? 
+	It seems the matching between optionmetrics, compustat, and crsp should be via cusips. Yes, cusip/isin/cik are usually best. 
+
+Matching in WRDS: 
+http://firestone.princeton.edu/econlib/Match.htm
+Can search!!! http://wrds-web.wharton.upenn.edu/wrds/tools/company_search.cfm
+	this gives ticker, cusip, gvkey, cik, naics, daterange, permco, etc... 
+	the thing is i need to do it programmatically
+
+wrds provide mapping using SAS: 
+	I guess i'll have to learn SAS
+http://wrds-web.wharton.upenn.edu/wrds/E-Learning/_000Course%20Materials/Linking_Databases/WRDS_Linking_Macros.cfm
+	
+======= Namefiles
+
+COMPUSTAT
+	+ NAMES
+	seems same as below... don't know what is the difference
+	+ NAMES_IX: gvkeyx! indic table about indices
+		gvkeys: 3 = S&P500, 5 = dow jones, 8 = nasdaq
+	+ NAMESD, NAMESM, NAMESQ (securities... D,M,Q should be just frequency)
+	gvkey, company name, cusip, cik, tic (but is different)
+
+
+OPTIONMETRICS
+	security_name (SECNMD): cusip, ticker, sic... good enough! 
+		too many observations to download manually... need to find programming solution

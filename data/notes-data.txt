@@ -1,0 +1,62 @@
+====== TODOs
+
+i guess i want to just fit a handful of firms. perhaps the current dow30. 
+
+compustat - financials for US and Canadian firms. 
+crsp - prices and volumes (nyse, amex, nasdaq)
+
+Can I put together a mySQL again? Ivo? 
+
+Figure out how to programmatically access wrds
+
+========== Computstat & CRSP
+	
+Compustat monthly updates - index constituent history
+	- just 2014-01 to 2014-08. this has s&p and dow. 
+	- has co-tic, but is it the same ticker? can check manually, if needed, via company name. yes, i can check manually over at optionmetrics. 
+	- gvkey (company key), id, gvkeyx (index key)	
+	- Dataset List → Compustat (COMPM) → Index Constituent History (IDXCST_HIS)
+	- accessed from crsp? Is Computstat not COMPUSTAT? 
+
+NAMES_IX: index information (id = gvkeyx)
+
+Let me see whether components of SPX 100 are all liquid enough? do a volume test. 
+
+
+========== SAMPLE OPTIONMETRICS DATA
+
+9/1/12 - 8/31/13 unless otherwise noted
+which file from which should I pull the indicative table? 
+
+msft volSurface
+	- forward prices: need to add spot, rates, and dividend (just assume correct expectation of dividends)
+
+zero curve, 1/1/96 - 8/31/13
+	- this seems nicely organized. do a little pre-interpolation to the standard maturities. 
+		
+msft dividend history. start (94) - dec 31 2013. [when will this be useful?]
+	- don't know what's adj_factor. amts go into future. 
+
+msft prices
+	- hmm, closing prices, shares outstanding, volume! 
+	- for things like sic, just need once
+	
+msft optionPrices [UNDESIRABLE]
+	- there is a LARGE number of options. Perhaps don't use it. 
+	- it does tell me bid-offer spread, open interest, volume, etc, as well as last-traded date. so does tell me liquidity conditions. 
+
+msft optionVolume [ONLY GIVE SMALL SENSE OF LIQUIDITY]
+	- can only use as first-step screening. 
+	- also only need total, which adds up volume of puts and calls. 
+	
+msft historicalVolatility [USELESS]
+	- not useful. this is a really simple thing to loko at tho. 
+
+msft standardizedOptions [USELESS - *atm* forward implied vol]
+	- I'm a bit confused, are these all at the money? 
+	- strike price useless. what is interpolated premium? 
+	- days: 30	60	91	122	152	182	273	365
+	
+==========
+
+IDs: secid, ticker, cusip

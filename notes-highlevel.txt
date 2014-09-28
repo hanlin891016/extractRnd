@@ -1,3 +1,5 @@
++ quick: if puts and calls have different implied vols... why does that not violate no-arbitrage? 
+
 + answer: if the estimated SDF on SPX incorporates a behavioral noise part. can this be exploited in an options-based trading strategy? (i think bar... sth has a paper on that)
 
 === Tests for derived cross-section of Ps

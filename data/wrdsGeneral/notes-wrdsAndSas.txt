@@ -1,0 +1,11 @@
+SSH
+	Host: 		wrds.wharton.upenn.edu
+	user_name:	jiacui
+	password:	Qewr1324
+
+Do I have to have a unix environment? Do I have to ubuntu? 
+	Okay, I need SAS in any case. No escaping. 
+
+Remoting WRDS via SAS via R:
+	http://iangow.wordpress.com/2012/09/03/remote-wrds-sas-from-r/#
+
