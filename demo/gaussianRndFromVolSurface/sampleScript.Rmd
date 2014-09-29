@@ -1,13 +1,14 @@
-Fitting log-normal distribution to MSFT's option-implied risk-neutral distribution
+Fit Lognormal RND to option prices (using optionmetrics vol surface)
 ========================================================
 
-Data is for date sep-4-202. We look at the surface 1-quarter out for now. 
+Data is for date sep-4-2012. Black-Scholes implied vol is *only* used as a quoting mechanism for option prices. We look at the surface 1-quarter out for now. 
 
 ```{r setoptions, echo = FALSE}
+library(knitr)
 opts_chunk$set(echo = TRUE, results = 'markup', cache = TRUE)
 ```
 
-I. Load in data
+I. Load data, do dividend & Interest rate adjustments, convert to log return space
 -------------------
 
 Load MSFT's 1-quarter-ahead implied vol surface on 9/4/2012. 
@@ -28,7 +29,7 @@ legend('topright', pch=1, col = c('red', 'blue'), legend = c('calls','puts'))
 
 We need to convert the data to log-return space. Thus we need MSFT's forward price, whose computation requires the current spot price, current1-quarter-ahead interest rate, and expected dividends within 1 quarter. 
 
-## spot price = 30.39
+### spot price = 30.39
 
 ```{r spotPrice}
 todel = read.csv('msft_prices.csv')
@@ -37,7 +38,7 @@ rm(todel)
 spotPrice
 ```
 
-## 1-quarter ahead (annualized) LIBOR rate = 0.35
+### 1-quarter ahead (annualized) LIBOR rate = 0.35%
 
 This is the LIBOR curve on that day. Do linear-interpolation to get the corresponding rate for 1 quarter ahead. 
 
@@ -53,7 +54,7 @@ legend('topright', pch=1, col = c('blue', 'red'), legend = c('LIBOR curve','Inte
 
 Thanks to QE, interest rates in the front end are very close to the zero-bound. 
 
-## Total dividend = \$0.23
+### Total dividend = \$0.23
 
 The amount of dividends in the next quarter: 
 
@@ -70,16 +71,16 @@ totalDividend = sum(divData$amount)
 totalDividend
 ```
 
-## forward Price = 32.93
+### So, forward Price = 32.93
 
 ```{r}
 forwardPrice = spotPrice * exp((interestRate/100) * (91/365)) - totalDividend
 forwardPrice
 ```
 
-## So, convert to log-return space
+### convert to log-return space
 
-Replot vol curve
+Replot vol curve: 
 
 ```{r, fig.width=7, fig.height=6}
 volData$log_return = log(volData$impl_strike/forwardPrice)
@@ -89,9 +90,329 @@ with(subset(volData, cp_flag == 'P'), lines(log_return, impl_volatility, col = '
 legend('topright', pch=1, col = c('red', 'blue'), legend = c('calls','puts'))
 ```
 
-II. Merge and visualize data
--------------------
+Puts are more expensive than calls, as reflected in the different implied vols. This should be fully accounted for after we let expected return (in risk-neutral distribution) differ from risk-free rate. 
 
-III. Fit a curve
--------------------
 
+II. Check that we can accurately price options using this vol surface
+----------
+
+Optionmetrics used standard Black-Scholes: 
+
+```{r}
+# function to calculate option prices using Black-Scholes. 
+#     cp_flag = c('C','P'), fwd = forward price, K = strike price, 
+#     rf = ann. risk free rate, tau = time-to-expiry in years, sigma = implied vol
+optionPrice_bs = function(cp_flag, fwd, K, rf, tau, sigma){
+  d1 = (log(fwd/K) + sigma^2*tau/2)/(sigma*sqrt(tau))
+  d2 = (log(fwd/K) - sigma^2*tau/2)/(sigma*sqrt(tau))
+  discount = exp(-rf * tau)
+  if (cp_flag == 'C'){
+        return(discount * (fwd * pnorm(d1) - K * pnorm(d2)))
+  }else if (cp_flag == 'P') {
+    return(discount * (K * pnorm(-d2) - fwd * pnorm(-d1)))
+  }else{
+   stop("Unrecognized option type.") 
+  }
+}
+
+# some checks - see spreadsheets on google docs for details
+stopifnot(abs(log(optionPrice_bs('C',33,35,0.0035,.25,.223)/0.7164216209)) < 0.00001)
+stopifnot(abs(log(optionPrice_bs('P',33,35,0.0035,.25,.223)/2.714672386)) < 0.00001)
+```
+
+### Make sure that this vol-surface can generate the observed option prices
+
+Okay, does this fit the original MSFT option prices? If the answer is yes, we can just use vol surface and forget about the many options. Let's load prices of options traded on that day, and apply some data-quality-filters. 
+
+```{r}
+# load prices of liquid options on that day. 
+optPrices = subset(read.csv('msft_optionPrices.csv'), (date == 20120904) & !is.na(last_date) & !is.na(impl_volatility), select = c('date','exdate','last_date','cp_flag','strike_price','best_bid','best_offer','volume','open_interest','impl_volatility','delta'))
+optPrices$strike_price = optPrices$strike_price/1000 
+optPrices$mid = (optPrices$best_offer + optPrices$best_bid) / 2
+
+# get days to expiry, days since last trade, etc.
+getDateDiff = function(fromDate, toDate){
+  fromDate = as.Date(as.character(fromDate),format = '%Y%m%d')
+  toDate = as.Date(as.character(toDate),format = '%Y%m%d')
+  return(as.numeric(toDate - fromDate))
+}
+optPrices$days = mapply(getDateDiff, optPrices$date, optPrices$exdate)
+optPrices$daysSinceLastTrade = mapply(getDateDiff, optPrices$last_date, optPrices$date)
+
+# only look at ones traded today - 163 options remain
+hist(optPrices$daysSinceLastTrade) # days since last trade
+vars = names(optPrices)
+vars = vars[!(names(optPrices) %in% c('date','exdate','daysSinceLastTrade','last_date'))]
+optPrices = subset(optPrices, daysSinceLastTrade == 0, vars)
+
+# ===  let's take a look at the data! 
+
+# hist(optPrices$days)  # distribution of expiries
+# # distribution of volume and open interest, in terms of premium
+# par(mfrow = c(1,2))
+# with(optPrices,hist(volume * mid))
+# with(optPrices,hist(open_interest * mid))
+# par(mfrow = c(1,1))
+
+# # where are most of the open interests & volumes distributed? which expires are most liquid, in other words? 
+# days = unique(optPrices$days)
+# volume = unlist(lapply(days, function(day){
+#   idx = optPrices$days == day
+#   return(with(optPrices, sum(volume[idx] * mid[idx])))
+# }))
+# oi = unlist(lapply(days, function(day){
+#   idx = optPrices$days == day
+#   return(with(optPrices, sum(open_interest[idx] * mid[idx])))
+# }))
+# plot(days,log(volume))
+# plot(days,oi)
+# plot(oi,volume)
+
+# (offer - bid) / mid - okay, we should require this to be not-too-small
+with(optPrices, plot(mid, (best_offer - best_bid)/mid))
+optPrices = subset(optPrices, (best_offer - best_bid)/mid < .1)
+
+# just look at the ones around 1-quarter-horizon. Finally! Ended up with 39 options. Write to file. 
+optPrices = subset(optPrices, (days > 60) & (days < 120))
+sort(optPrices$strike_price)
+optPrices = optPrices[with(optPrices,order(cp_flag, strike_price)),]
+write.csv(optPrices,'msft_optionPrices_filtered.csv')
+```
+
+After applying filters, we ended up with 18 calls and 21 puts. Let's make sure that we can price options accurately: 
+
+```{r}
+# compute option prices using my Black-scholes
+n = length(optPrices$cp_flag)
+optPrices$mid_calc = rep(NaN,n,1)
+for (i in 1:n){
+  optPrices$mid_calc[i] = optionPrice_bs(optPrices$cp_flag[i], forwardPrice, optPrices$strike_price[i],interestRate/100, optPrices$days[i]/365, optPrices$impl_volatility[i])
+}
+
+# how much difference is my calculation? This seems good! 
+plot(optPrices$mid, optPrices$mid_calc, xlab = 'real prices', ylab = 'black-scholes computed prices')
+title('the errors are probably due to dividends & small changes in interest rate')
+abline(0,1,col='blue')
+
+# compare with the prices inferred from vol surface. Let me just look at the 109 day ones
+n = length(volData$delta)
+volData$mid_calc = rep(NaN,n,1)
+for (i in 1:n){
+  volData$mid_calc[i] = optionPrice_bs(volData$cp_flag[i], forwardPrice, volData$impl_strike[i],interestRate/100, 109/360, volData$impl_volatility[i])
+}
+
+# compare this with the implied vol surface... which is supposed to be an interpolation of these guys. two plots, one for call and one for put. 
+optPrices = subset(optPrices, days == 109)
+
+par(mfrow = c(1,2))
+with(subset(volData, cp_flag == 'C'), plot(impl_strike, mid_calc, col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5)))
+title('Calls')
+with(subset(optPrices, cp_flag == 'C'), points(strike_price, mid, col = 'blue', pch = "x"))
+
+with(subset(volData, cp_flag == 'P'), plot(impl_strike, mid_calc, col = 'red', type = "o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5)))
+title('Puts')
+with(subset(optPrices, cp_flag == 'P'), points(strike_price, mid, col = 'blue', pch = "x"))
+legend('topright', pch=1, col = c('red', 'blue'), legend = c('inferred from vol surface','actual option prices'))
+par(mfrow = c(1,1))
+```
+
+III. Okay! Let's fit a normal distribution
+---------
+
+Treat each data point in the vol surface as a separate "option", and minimize an objective function in price space: 
+
+$$Obj_l(\theta) = \sum_i |P(x_i | \theta) - p_i|^l$$
+
+Where $\theta = (\mu_Q, \sigma_Q)$ are the (annualized) estimated (ex-dividend) mean and volatility of risk neutral log returns, $x_i$ include the relevant parameters of the option (option type, strike price, ...) $P(x_i | \theta) = e^{- r_f \tau} \mathbb{E}_\theta [(S - k_i)^+]$ is the price of (call) option $i$ using the risk neutral distribution. We will try both $l = 1$ and $l = 2$ (the former may be more robust). 
+
+```{r}
+volData$log_return = log(volData$impl_strike/forwardPrice)
+
+## objective function
+
+# calculate option prices. just integrate using the risk-neutral distribution. Note that mu and sigma are the risk-neutral ones (and annualized)
+#   BTW - black scholes becomes a special case of this
+optionPrice_rnd = function(cp_flag, mu, sigma, spot, K, rf, tau){
+  d1 = (log(spot/K) + (mu + sigma^2/2)*tau)/(sigma*sqrt(tau))
+  d2 = (log(spot/K) + (mu - sigma^2/2)*tau)/(sigma*sqrt(tau))
+  discount = exp(-rf * tau)
+  if (cp_flag == 'C'){
+        return(discount * (spot * exp(mu*tau) * pnorm(d1) - K * pnorm(d2)))
+  }else if (cp_flag == 'P') {
+    return(discount * (K * pnorm(-d2) - spot * exp(mu*tau) * pnorm(-d1)))
+  }else{
+   stop("Unrecognized option type.") 
+  }
+}
+
+# let's make sure that when mu = rf, this reduces to black-scholes. yep. 
+stopifnot(abs(log(optionPrice_bs('C',33,35,0.0035,.25,.223)/optionPrice_rnd('C',0.0035,.223,33*exp(-.0035*.25),35,.0035, .25))) < 0.000000000001)
+stopifnot(abs(log(optionPrice_bs('P',33,35,0.0035,.25,.223)/optionPrice_rnd('P',0.0035,.223,33*exp(-.0035*.25),35,.0035, .25))) < 0.0000000001)
+
+# okay, do some intuitive plots. If mu or sigma changes,, what happens to call prices. 
+mu = 0.07   # seems like a reasonable annual return for MSFT
+mus = 0.01 * -20: 20
+sigma = .223
+sigmas = 0.01 * 10:30
+rf = interestRate / 100
+tau = 0.25
+K = spotPrice   # make it at current spot (which is close to ATM)
+
+par(mfrow = c(1,2))
+plot(mus, optionPrice_rnd('C',mus,sigma,spotPrice,K,rf,tau), xlab = 'risk neutral mu', ylab = 'option prices', main = 'call')
+plot(mus, optionPrice_rnd('P',mus,sigma,spotPrice,K,rf,tau), xlab = 'risk neutral mu', ylab = 'option prices', main = 'put')
+par(mfrow = c(1,1))
+
+par(mfrow = c(1,2))
+plot(sigmas, optionPrice_rnd('C',mu,sigmas,spotPrice,K,rf,tau), xlab = 'risk neutral sigma', ylab = 'option prices', main = 'call')
+plot(sigmas, optionPrice_rnd('P',mu,sigmas,spotPrice,K,rf,tau), xlab = 'risk neutral sigma', ylab = 'option prices', main = 'put')
+par(mfrow = c(1,1))
+```
+
+Okay, how well does my distribution fit option prices? Just put in some random mu and sigma: 
+
+```{r}
+mu = 0.07
+sigma = 0.23
+
+n = length(volData$delta)
+volData$mid_calc = rep(NaN,n,1)
+rnPrice = rep(NaN,n,1)
+for (i in 1:n){
+  rnPrice[i] = optionPrice_rnd(volData$cp_flag[i], mu, sigma, spotPrice, volData$impl_strike[i], interestRate/100, 0.25)
+    volData$mid_calc[i] = optionPrice_bs(volData$cp_flag[i], forwardPrice, volData$impl_strike[i],interestRate/100, tau, volData$impl_volatility[i])
+}
+
+callidx = volData$cp_flag == 'C'
+
+par(mfrow = c(1,2))
+plot(volData$impl_strike[callidx],rnPrice[callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'calls, with mu = 7% under RND')
+with(subset(volData, cp_flag == 'C'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+plot(volData$impl_strike[!callidx],rnPrice[!callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'puts')
+with(subset(volData, cp_flag == 'P'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+legend('topright', pch=1, col = c('red', 'blue'), legend = c('under risk neutral distribution','""actual"" option prices'))
+par(mfrow = c(1,1))
+```
+
+So clearly 7% is too high a return for risk neutral distribution!. Let me try 0% return (which may still be too high, because that is around risk free rate... and MSFT is quite risky)
+
+```{r}
+# ugly copying of code... change later
+mu = 0.0
+
+rnPrice = rep(NaN,n,1)
+for (i in 1:n){
+  rnPrice[i] = optionPrice_rnd(volData$cp_flag[i], mu, sigma, spotPrice, volData$impl_strike[i], interestRate/100, 0.25)
+}
+
+par(mfrow = c(1,2))
+plot(volData$impl_strike[callidx],rnPrice[callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'calls, with mu = 0% under RND')
+with(subset(volData, cp_flag == 'C'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+plot(volData$impl_strike[!callidx],rnPrice[!callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'puts')
+with(subset(volData, cp_flag == 'P'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+legend('topright', pch=1, col = c('red', 'blue'), legend = c('under risk neutral distribution','""actual"" option prices'))
+par(mfrow = c(1,1))
+```
+
+Hmm, now I'm slightly over pricing OTM calls and underpricing OTM puts. If I increase sigma, that should slightly fix the puts problem, but can make the calls worse...
+
+```{r}
+sigma = 0.25
+rnPrice = rep(NaN,n,1)
+for (i in 1:n){
+  rnPrice[i] = optionPrice_rnd(volData$cp_flag[i], mu, sigma, spotPrice, volData$impl_strike[i], interestRate/100, 0.25)
+}
+
+par(mfrow = c(1,2))
+plot(volData$impl_strike[callidx],rnPrice[callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'calls, mu = 0%, sigma = 25%')
+with(subset(volData, cp_flag == 'C'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+plot(volData$impl_strike[!callidx],rnPrice[!callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'puts')
+with(subset(volData, cp_flag == 'P'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+legend('topright', pch=1, col = c('red', 'blue'), legend = c('under risk neutral distribution','""actual"" option prices'))
+par(mfrow = c(1,1))
+```
+
+Okay! Let me optimize over these two parameters. 
+
+```{r}
+# objective function. 
+obj = function(mu, sigma){
+  # project the function (hardcode some things)
+  priceFunc = function(cp_flag, mu, sigma, impl_strike){
+      return(optionPrice_rnd(cp_flag, mu, sigma, spotPrice, impl_strike, interestRate/100, 0.25))}
+  
+  # estimate prices
+  mus = rep(mu,n)
+  sigmas = rep(sigma,n)
+  prices = mapply(priceFunc, volData$cp_flag, mus, sigmas, volData$impl_strike)
+  
+  # return rmse of pricing errors. penalize for negative sigma
+  return(sqrt(mean((prices - volData$mid_calc)^2)))
+}
+
+# let's optimize! output: -2.6% ann return, 24% ann vol
+thetaHat = optim(par = c(0,0.2),function(par){return(obj(par[1], par[2]))})
+```
+
+Plot the fitted result:
+
+```{r}
+mu = thetaHat$par[1]
+sigma = thetaHat$par[2]
+rnPrice = rep(NaN,n,1)
+for (i in 1:n){
+  rnPrice[i] = optionPrice_rnd(volData$cp_flag[i], mu, sigma, spotPrice, volData$impl_strike[i], interestRate/100, 0.25)}
+
+par(mfrow = c(1,2))
+plot(volData$impl_strike[callidx],rnPrice[callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'calls')
+with(subset(volData, cp_flag == 'C'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+plot(volData$impl_strike[!callidx],rnPrice[!callidx], col = 'red', type ="o", xlab = 'strike', ylab = 'option price', ylim = c(0.2, 5), main = 'puts')
+with(subset(volData, cp_flag == 'P'), points(impl_strike, mid_calc, col = 'blue', pch = "x"))
+legend('topright', pch=1, col = c('red', 'blue'), legend = c('under risk neutral distribution','""actual"" option prices'))
+par(mfrow = c(1,1))
+```
+
+
+## Important: how robust is this result? Sensitivity analysis
+
+I want to be able to interpret how sharp the identification is. What if mu and sigma varies a bit? 
+
+```{r}
+mus = 0.005*-20:20
+sigmas = 0.01*10:30
+objs = outer(mus, sigmas, Vectorize(obj))
+filled.contour(mus, sigmas, objs, color = terrain.colors,
+  plot.title = title(main = 'RMSE of pricing errors', xlab = 'mu', ylab = 'sigma'),
+  plot.axes=points(thetaHat$par[1],thetaHat$par[2],col = 'red', lwd = 10))
+```
+
+### check - what if I minimize L1 norm? 
+
+```{r}
+# objective function. 
+obj_l1 = function(mu, sigma){
+  # project the function (hardcode some things)
+  priceFunc = function(cp_flag, mu, sigma, impl_strike){
+      return(optionPrice_rnd(cp_flag, mu, sigma, spotPrice, impl_strike, interestRate/100, 0.25))}
+  
+  # estimate prices
+  mus = rep(mu,n)
+  sigmas = rep(sigma,n)
+  prices = mapply(priceFunc, volData$cp_flag, mus, sigmas, volData$impl_strike)
+  
+  # return pricing errors
+  return(mean(abs(prices - volData$mid_calc)))
+}
+
+# let's optimize! output: -2.6% ann return, 24% ann vol
+thetaHat_l1 = optim(par = c(0,0.2),function(par){return(obj_l1(par[1], par[2]))})
+```
+
+It doesn't change much! Pretty robust. Coutour plot. 
+
+```{r}
+objs_l1 = outer(mus, sigmas, Vectorize(obj_l1))
+filled.contour(mus, sigmas, objs_l1, color = terrain.colors,
+  plot.title = title(main = 'Mean Abs Pricing Error', xlab = 'mu', ylab = 'sigma'),
+  plot.axes=points(thetaHat_l1$par[1],thetaHat_l1$par[2],col = 'red', lwd = 10))
+```
